@@ -1,6 +1,6 @@
 import './global.css'
 
-const WELCOME_MESSAGE: string = 'Hola, bienvenido a FitCore. ¿En qué puedo ayudarte hoy?'
+const WELCOME_MESSAGE = 'Hola, bienvenido a FitCore. ¿En qué puedo ayudarte hoy?'
 const app = document.getElementById('app')!
 
 app.innerHTML =
@@ -9,7 +9,7 @@ app.innerHTML =
 
         <header id="chat-header" class="flex items-center gap-3 px-5 py-4 bg-neutral-900 border-b border-neutral-800 opacity-0 animate-header-enter">
 
-            <div id="chat-logo" class="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-150 ease-in-out active:scale-95">
+            <div id="chat-logo" class="chat-logo w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-150 ease-in-out active:scale-95">
 
                 <svg class="w-5 h-5 fill-white" viewBox="0 0 24 24">
                     <path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29l-1.43-1.43z"/>
@@ -63,7 +63,7 @@ app.innerHTML =
 
             <button
                 id="chat-send"
-                class="group w-10 h-10 bg-red-600 active:scale-95 transition-[transform,background-color] duration-150 ease-out rounded-xl flex items-center justify-center shrink-0 cursor-pointer"
+                class="chat-send group w-10 h-10 bg-red-600 active:scale-95 transition-[transform,background-color] duration-150 ease-out rounded-xl flex items-center justify-center shrink-0 cursor-pointer"
             >
 
                 <svg class="w-4 h-4 fill-white transition-transform duration-150 ease-out group-active:translate-x-0.5" viewBox="0 0 24 24">

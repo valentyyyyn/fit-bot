@@ -2,8 +2,6 @@
 
 @theme {
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
     --animate-message-enter: message-enter 300ms var(--ease-out) forwards;
     --animate-header-enter: header-enter 400ms var(--ease-out) forwards;
@@ -72,10 +70,10 @@ html {
 }
 
 @media (hover: hover) and (pointer: fine) {
-    #chat-send:hover {
+    .chat-send:hover {
         background-color: #c00e18;
     }
-    #chat-logo:hover {
+    .chat-logo:hover {
         transform: scale(1.05);
     }
 }
