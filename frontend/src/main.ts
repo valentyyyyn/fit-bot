@@ -1,11 +1,21 @@
 import './global.css'
 
 const WELCOME_MESSAGE = 'Hola, bienvenido a FitCore. ¿En qué puedo ayudarte hoy?'
-const app = document.getElementById('app')!
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+
+interface Message {
+    role: 'user' | 'assistant'
+    content: string
+}
+
+const history: Message[] = []
+
+const app = document.getElementById('app')
+if (!app) throw new Error('Missing #app element')
 
 app.innerHTML =
 `
-    <div id="chat-container" class="w-full max-w-sm mx-auto h-155 flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden">
+    <div id="chat-container" class="w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto h-155 flex flex-col bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden">
 
         <header id="chat-header" class="flex items-center gap-3 px-5 py-4 bg-neutral-900 border-b border-neutral-800 opacity-0 animate-header-enter">
 
@@ -44,7 +54,7 @@ app.innerHTML =
             <div class="self-start max-w-[85%] opacity-0 animate-welcome-enter">
 
                 <span class="text-xs font-bold uppercase tracking-widest text-red-600 bg-red-600/10 px-2 py-0.5 rounded mb-1 inline-block">FitBot</span>
-                <div class="bg-neutral-950 border border-neutral-700 text-neutral-300 text-sm rounded-xl rounded-bl-sm px-4 py-2.5 leading-relaxed">
+                <div class="bg-neutral-950 border border-neutral-700 text-neutral-300 text-sm md:text-base rounded-xl rounded-bl-sm px-4 py-2.5 leading-relaxed">
                     ${WELCOME_MESSAGE}
                 </div>
 
@@ -75,4 +85,124 @@ app.innerHTML =
         </footer>
 
     </div>
-`;
+`
+
+const messagesElement = document.getElementById('chat-messages')!
+const inputElement = document.getElementById('chat-input') as HTMLInputElement
+const sendElement = document.getElementById('chat-send')!
+
+if (!messagesElement || !inputElement || !sendElement) {
+    throw new Error('Missing required DOM elements')
+}
+
+function appendMessage(role: 'user' | 'assistant', content: string): void {
+    const wrapper = document.createElement('div')
+    wrapper.className = role === 'user' ? 
+    'self-end max-w-[85%] opacity-0 animate-message-enter'
+    : 
+    'self-start max-w-[85%] opacity-0 animate-message-enter'
+   
+    if (role === 'assistant') {
+        const label = document.createElement('span');
+        label.className = 'text-xs font-bold uppercase tracking-widest text-red-600 bg-red-600/10 px-2 py-0.5 rounded mb-1 inline-block'
+        label.textContent = 'FitBot'
+        wrapper.appendChild(label)
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = role === 'user' ? 
+    'bg-red-600 text-white text-sm md:text-base rounded-xl rounded-br-sm px-4 py-2.5 leading-relaxed'
+    : 
+    'bg-neutral-950 border border-neutral-700 text-neutral-300 text-sm md:text-base rounded-xl rounded-bl-sm px-4 py-2.5 leading-relaxed'; 
+
+    // Line breaks handling for agent responses
+    content.split('\n').forEach((line, i, arr) => {
+        const span = document.createElement('span')
+        span.textContent = line
+        bubble.appendChild(span)
+        if (i < arr.length - 1) bubble.appendChild(document.createElement('br'))
+    })
+
+    wrapper.appendChild(bubble)
+    messagesElement.appendChild(wrapper)
+    messagesElement.scrollTop = messagesElement.scrollHeight
+}
+
+function appendTyping(): HTMLDivElement {
+    const wrapper = document.createElement('div')
+    wrapper.className = 'self-start max-w-[85%] opacity-0 animate-message-enter'
+    wrapper.id = 'typing-indicator'
+
+    const label = document.createElement('span')
+    label.className = 'text-xs font-bold uppercase tracking-widest text-red-600 bg-red-600/10 px-2 py-0.5 rounded mb-1 inline-block'
+    label.textContent = 'FitBot'
+
+    const bubble = document.createElement('div')
+    bubble.className = 'bg-neutral-950 border border-neutral-700 text-neutral-300 text-sm md:text-base rounded-xl rounded-bl-sm px-4 py-2.5 leading-relaxed flex gap-1 items-center'
+
+    for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('span')
+        dot.className = 'w-1.5 h-1.5 bg-neutral-500 rounded-full animate-bounce'
+        dot.style.animationDelay = `${i * 150}ms`
+        bubble.appendChild(dot)
+    }
+
+    wrapper.appendChild(label)
+    wrapper.appendChild(bubble)
+
+    messagesElement.appendChild(wrapper)
+    messagesElement.scrollTop = messagesElement.scrollHeight
+    return wrapper
+}
+
+function setLoading(loading: boolean): void {
+    inputElement.disabled = loading
+    loading ? sendElement.setAttribute('disabled', '') : sendElement.removeAttribute('disabled')
+    sendElement.classList.toggle('opacity-50', loading)
+    sendElement.classList.toggle('cursor-not-allowed', loading)
+    sendElement.classList.toggle('cursor-pointer', !loading)
+}
+
+async function sendMessage(): Promise<void> {
+    const message = inputElement.value.trim()
+    if (!message) return
+
+    inputElement.value = ''
+    setLoading(true)
+    appendMessage('user', message)
+
+    const typing = appendTyping()
+
+    try {
+        const response = await fetch(`${API_URL}/api/v1/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, history }),
+        })
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+        const data = await response.json() as { response: string }
+
+        history.push({ role: 'user', content: message })
+        history.push({ role: 'assistant', content: data.response })
+        typing.remove()
+        appendMessage('assistant', data.response)
+    } 
+    catch {
+        typing.remove()
+        appendMessage('assistant', 'Hubo un error al conectar con el servidor. Intentá de nuevo.')
+    } 
+    finally {
+        setLoading(false)
+    }
+}
+
+sendElement.addEventListener('click', sendMessage)
+
+inputElement.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault()
+        if (!inputElement.disabled) sendMessage()
+    }
+})
