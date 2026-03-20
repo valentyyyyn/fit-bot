@@ -1,150 +1,147 @@
 # AGENTS.md
 
 ## Project Overview
-FitBot is a monorepo with a Python FastAPI backend and a frontend directory.
+FitBot is a chatbot web app for a fictional gym (FitCore). Monorepo with a Python FastAPI backend and a TypeScript/Vite frontend.
 
 ## Repository Structure
 ```
 fit-bot/
-├── backend/          # Python FastAPI application
-│   ├── main.py       # FastAPI app entry point
-│   ├── prompt.py     # System prompt for the chatbot
+├── backend/
+│   ├── main.py           # FastAPI app, chat endpoint, health check
+│   ├── prompt.py         # System prompt constant (SYSTEM_PROMPT)
 │   ├── requirements.txt
 │   └── dockerfile
-├── frontend/         # Frontend assets (TypeScript + HTML)
+├── frontend/
+│   ├── index.html        # SPA entry point
+│   ├── src/
+│   │   ├── main.ts       # DOM manipulation, chat logic, API calls
+│   │   └── global.css    # Tailwind v4 + custom animations
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── dockerfile
 ├── docker-compose.yml
-└── .gitignore
+└── DOCS.md               # Project documentation (Spanish)
 ```
 
 ---
 
-## Build Commands
+## Build / Run Commands
 
 ### Backend (Python)
 ```bash
-# Install dependencies
 pip install -r backend/requirements.txt
-
-# Run the server
-cd backend && uvicorn main:app --reload
-
-# Run with Docker
-docker-compose up --build
-
-# Lint (configured in project)
-ruff check backend/
+cd backend && uvicorn main:app --reload       # dev server on :8000
+ruff check backend/                            # lint
 ```
 
-### Frontend
+### Frontend (bun — not npm)
 ```bash
-# Install dependencies
-cd frontend && npm install
-
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
+cd frontend && bun install
+bun run dev                                    # dev server on :5173 (Vite default)
+bun run build                                  # typecheck + production build
+bun run preview                                # preview production build
 ```
 
----
-
-## Code Style Guidelines
-
-### Python (Backend)
-
-**Imports**: Standard library → Third-party → Local. Alphabetize within groups.
-```python
-import os
-from typing import Optional
-
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-from . import local_module
+### Docker
+```bash
+docker-compose up --build                      # runs both backend (:8000) and frontend (:3000)
 ```
-
-**Formatting**: 4 spaces, max 88 chars line length (Black), trailing commas.
-
-**Types**: Use type hints for all parameters/returns. Use Pydantic models for validation. Prefer `Optional[X]` over `X | None`.
-
-**Naming**: `snake_case` (functions/variables), `PascalCase` (classes/models), `SCREAMING_SNAKE_CASE` (constants).
-
-**Error Handling**: Use FastAPI's HTTPException. Validate input with Pydantic. Never expose sensitive errors in production.
-
-```python
-from fastapi import HTTPException
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int):
-    if item_id not in items:
-        raise HTTPException(status_code = 404, detail = "Item not found")
-    return {"item": items[item_id]}
-```
-
-**Async**: Use `async def` for I/O operations, regular `def` for sync operations.
-
----
-
-### TypeScript/JavaScript (Frontend)
-
-**Formatting**: 2 spaces, max 100 chars, semicolons, single quotes.
-
-**Types**: Strict mode, explicit return types, avoid `any`.
-
-**Naming**: `camelCase` (variables/functions), `PascalCase` (classes/interfaces), `kebab-case` (filenames).
-
----
-
-### General Guidelines
-
-**Security**: Never commit secrets/API keys. Use environment variables. Validate and sanitize all user input.
-
-**Git Commits**: Use conventional format: `type(scope): description`. Types: feat, fix, docs, style, refactor, test, chore.
 
 ---
 
 ## Testing
 
-**Current Status**: No tests configured.
-
-When tests are added:
+No tests configured yet. When added:
 ```bash
-# Python (pytest)
-pytest                 # all tests
-pytest tests/test_api.py           # specific file
-pytest tests/test_api.py::test_xyz # specific test
+# Python
+pytest
+pytest tests/test_api.py
+pytest tests/test_api.py::test_xyz
 
-# JavaScript ( Vitest/Jest)
-npm test
-npm test -- --run
+# JS/TS
+bun test
 ```
+
+---
+
+## Code Style — Python (Backend)
+
+**Imports**: stdlib → third-party → local, alphabetized within groups.
+```python
+import asyncio
+import logging
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException
+from groq import Groq, APIError
+from pydantic import BaseModel, Field
+
+from prompt import SYSTEM_PROMPT
+```
+
+**Formatting**: 4 spaces, no enforced line-length limit in config (keep reasonable ~100).
+
+**Types**: type hints on all params/returns. Pydantic `BaseModel` for request/response schemas. Use `list[X]` (lowercase) not `List[X]`.
+
+**Naming**: `snake_case` functions/vars, `PascalCase` classes/models, `SCREAMING_SNAKE_CASE` constants.
+
+**Error handling**: raise `HTTPException` with appropriate status codes. Catch specific exceptions (`APIError`), log with `logging` module, never expose internal details.
+
+**Async**: `async def` for I/O-bound endpoints; use `asyncio.to_thread()` for sync SDK calls (see `main.py:61`).
+
+**Pydantic validation**: use `Field(...)` for constraints (min/max length, etc).
+
+---
+
+## Code Style — TypeScript (Frontend)
+
+**Formatting**: 4 spaces (match existing code), semicolons, single quotes.
+
+**Types**: strict mode enabled in tsconfig. Use explicit return types on functions (`: void`, `: Promise<void>`). Use `as` for DOM assertions. Avoid `any`.
+
+**Naming**: `camelCase` vars/functions, `PascalCase` interfaces/types, `SCREAMING_SNAKE_CASE` top-level constants. Files are `kebab-case`.
+
+**DOM pattern**: vanilla DOM manipulation (`document.createElement`, `classList`, `addEventListener`). No framework. Build HTML strings with template literals for initial render.
+
+**Imports**: CSS imported at top of entry file (`import './global.css'`). Environment vars via `import.meta.env`.
+
+---
+
+## General Guidelines
+
+**Security**: never commit `.env` files. API keys via environment variables only. Validate all user input (Pydantic on backend).
+
+**Git commits**: conventional format — `type(scope): description`. Types: feat, fix, docs, style, refactor, test, chore.
+
+**API conventions**: endpoints under `/api/v1/` prefix. Health check at `GET /api/v1/health`. Chat at `POST /api/v1/chat`.
 
 ---
 
 ## Environment Variables
 
-Required in `backend/.env` (do not commit):
+`backend/.env` (git-ignored):
 ```
 GROQ_API_KEY=your_api_key_here
 ```
 
-Optional frontend:
+Frontend (optional):
 ```
 VITE_API_URL=http://localhost:8000
 ```
 
 ---
 
-## Dependencies
+## Key Dependencies
 
 ### Backend
-- `fastapi` - Web framework
-- `uvicorn` - ASGI server
-- `groq` - LLM integration
-- `python-dotenv` - Environment variables
+- `fastapi` + `uvicorn` — web framework + ASGI server
+- `groq` — LLM API client (llama-3.3-70b-versatile)
+- `python-dotenv` — env loading
 
 ### Frontend
-- TypeScript
-- Vite
-- Tailwind CSS
+- `vite` — bundler + dev server
+- `tailwindcss` v4 — utility CSS
+- `typescript` ~5.9
+- `bun` — package manager + runtime
