@@ -40,3 +40,6 @@ npm-debug.log*
 frontend/dist/
 frontend/build/
 backend/dist/
+
+# DOCS
+DOCS.md
