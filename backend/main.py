@@ -12,6 +12,7 @@ from prompt import SYSTEM_PROMPT
 logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger(__name__)
 
+MAX_HISTORY = 20
 
 class Message(BaseModel):
     role: str
@@ -46,9 +47,6 @@ app.add_middleware(
 @app.get("/api/v1/health")
 def health() -> dict[str, str]:
     return {"status": "OK"}
-
-
-MAX_HISTORY = 20
 
 @app.post("/api/v1/chat", response_model = ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
